@@ -1,0 +1,129 @@
+:root {
+    --accent: #ff7a1a;
+    --bg: #0b1220;
+    --surface: #0f172a;
+    --border: #1f2937;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    display: flex;
+    height: 100vh; /* Fixed height for the whole app */
+    overflow: hidden; /* Prevent body scroll, let children scroll */
+}
+
+/* --- LEFT SIDEBAR (Navigation) --- */
+.sidebar {
+    width: 250px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100%;
+    overflow-y: auto; /* Scrollable if menu is long */
+}
+
+.brand { color: var(--accent); font-weight: bold; font-size: 1.5rem; margin-bottom: 30px; text-align: center; }
+.sidebar nav a {
+    display: block; padding: 12px; color: var(--muted); text-decoration: none;
+    border-radius: 8px; margin-bottom: 5px; transition: 0.2s;
+}
+.sidebar nav a:hover, .sidebar nav a.active { background: rgba(255, 122, 26, 0.1); color: var(--accent); }
+.logout { color: #ef4444 !important; margin-top: auto; }
+
+/* --- CENTER CONTENT --- */
+.content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto; /* Independent scrolling */
+    height: 100%;
+    position: relative;
+}
+
+/* --- RIGHT SIDEBAR (Metrics/Summary) --- */
+.metrics {
+    width: 280px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100%;
+    overflow-y: auto; /* Independent scrolling */
+}
+
+.metrics h3 { margin-bottom: 20px; font-size: 1.1rem; color: var(--accent); margin-top: 0; }
+
+.metric-card-small {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.metric-card-small .val { font-size: 1.5rem; font-weight: bold; color: white; }
+.metric-card-small .lbl { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; }
+
+/* --- COMMON ELEMENTS --- */
+h1, h2, h3 { color: var(--accent); margin-top: 0; }
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
+
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
+th { color: var(--accent); background: rgba(255,255,255,0.02); position: sticky; top: 0; } /* Sticky headers */
+tr:hover { background: rgba(255,255,255,0.02); }
+
+input, select {
+    background: var(--bg); border: 1px solid var(--border);
+    color: white; padding: 12px; border-radius: 8px; width: 100%;
+    box-sizing: border-box; margin-bottom: 15px; outline: none;
+}
+input:focus, select:focus { border-color: var(--accent); }
+
+.btn {
+    background: var(--accent); color: white; border: none; padding: 12px 20px;
+    border-radius: 8px; cursor: pointer; font-weight: bold; text-align: center;
+    display: inline-block; text-decoration: none; transition: 0.2s;
+}
+.btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+.btn-danger { background: #ef4444; }
+.btn-success { background: #10b981; }
+
+.status-tag { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+.status-available { background: #10b981; color: white; }
+.status-borrowed { background: #f97316; color: white; }
+.status-lost { background: #ef4444; color: white; }
+
+/* Mobile Reponsiveness */
+@media (max-width: 1200px) {
+    .metrics { display: none; } /* Hide right sidebar on smaller screens */
+}
+@media (max-width: 768px) {
+    .sidebar { width: 60px; padding: 10px; }
+    .brand { display: none; }
+    .sidebar nav a { text-align: center; font-size: 0.7rem; padding: 10px 5px; }
+    .sidebar nav a::before { content: '🔗'; display: block; font-size: 1.2rem; margin-bottom: 2px; }
+    .content { padding: 20px; }
+}

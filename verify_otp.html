@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify OTP</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="centered-layout">
+    <div class="card auth-card">
+        <h2>Verify Identity</h2>
+        <p style="color: var(--muted);">Enter the OTP sent to your email.</p>
+        
+        <form onsubmit="verify(event)">
+            <input type="text" placeholder="Enter 6-digit OTP" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;" value="123456">
+            <button type="submit" class="btn" style="width: 100%;">Verify & Login</button>
+        </form>
+        
+        <button class="btn" style="background: transparent; border: 1px solid var(--border); margin-top: 10px; width: 100%;">Resend Code</button>
+    </div>
+
+    <script>
+        function verify(e) {
+            e.preventDefault();
+            // Set session flag
+            sessionStorage.setItem('isLoggedIn', 'true');
+            sessionStorage.setItem('role', 'admin');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

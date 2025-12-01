@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .chart-container {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            min-height: 350px;
+        }
+        .chart-container h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: var(--accent);
+        }
+        .top-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .metric-box { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
+        .metric-val { font-size: 2.5rem; font-weight: bold; color: white; }
+        .metric-lbl { color: var(--muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">Library Admin</div>
+        <nav>
+            <a href="index.html" class="active">Dashboard</a>
+            <a href="students.html">Students</a>
+            <a href="books.html">Books</a>
+            <a href="transaction.html">Transactions</a>
+            <a href="payment.html">Payments</a>
+            <a href="report.html">Reports</a>
+            <a href="backup.html">Backup & Restore</a>
+            <a href="#" onclick="logout()" class="logout">Logout</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <h1>Dashboard</h1>
+        
+        <div class="top-cards">
+            <div class="metric-box"><div class="metric-val" id="stat-students">0</div><div class="metric-lbl">Students</div></div>
+            <div class="metric-box"><div class="metric-val" id="stat-books">0</div><div class="metric-lbl">Total Books</div></div>
+            <div class="metric-box"><div class="metric-val" id="stat-borrowed" style="color: #f97316;">0</div><div class="metric-lbl">Borrowed</div></div>
+            <div class="metric-box"><div class="metric-val" id="stat-lost" style="color: #ef4444;">0</div><div class="metric-lbl">Lost</div></div>
+        </div>
+
+        <div class="chart-grid">
+            <div class="chart-container">
+                <h3>Book Status</h3>
+                <canvas id="bookStatusChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Library Overview</h3>
+                <canvas id="libraryOverviewChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Top Borrowed Books</h3>
+                <canvas id="topBooksChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Recent Activity</h3>
+                <canvas id="borrowTrendsChart"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="metrics">
+        <h3>Summary</h3>
+        <div class="metric-card-small"><div class="val" id="metric-students">0</div><div class="lbl">Students</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-books">0</div><div class="lbl">Books</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-borrowed" style="color:#f97316;">0</div><div class="lbl">Borrowed</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-lost" style="color:#ef4444;">0</div><div class="lbl">Lost</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-overdue" style="color:#fbbf24;">0</div><div class="lbl">Overdue</div></div>
+    </aside>
+
+    <script>
+        const db = JSON.parse(localStorage.getItem('libraryDB')) || {};
+        function logout() { sessionStorage.clear(); window.location.href = 'login.html'; }
+        if(!sessionStorage.getItem('isLoggedIn')) window.location.href = 'login.html';
+
+        function updateMetrics() {
+            const totalBooks = db.books?.length || 0;
+            const borrowed = db.books?.filter(b => b.status === 'Borrowed').length || 0;
+            const lost = db.books?.filter(b => b.status === 'Lost').length || 0;
+            
+            // Top Cards
+            document.getElementById('stat-students').innerText = db.students?.length || 0;
+            document.getElementById('stat-books').innerText = totalBooks;
+            document.getElementById('stat-borrowed').innerText = borrowed;
+            document.getElementById('stat-lost').innerText = lost;
+
+            // Sidebar Metrics
+            document.getElementById('metric-students').innerText = db.students?.length || 0;
+            document.getElementById('metric-books').innerText = totalBooks;
+            document.getElementById('metric-borrowed').innerText = borrowed;
+            document.getElementById('metric-lost').innerText = lost;
+            document.getElementById('metric-overdue').innerText = Math.floor(borrowed * 0.1); 
+        }
+        updateMetrics();
+
+        // Charts
+        const accentColor = '#ff7a1a';
+        const textColor = '#e5e7eb';
+        const gridColor = '#1f2937';
+        Chart.defaults.color = textColor;
+        Chart.defaults.borderColor = gridColor;
+
+        const borrowedCount = db.books?.filter(b => b.status === 'Borrowed').length || 0;
+        const lostCount = db.books?.filter(b => b.status === 'Lost').length || 0;
+        const availCount = (db.books?.length || 0) - borrowedCount - lostCount;
+
+        new Chart(document.getElementById('bookStatusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Available', 'Borrowed', 'Lost'],
+                datasets: [{ data: [availCount, borrowedCount, lostCount], backgroundColor: ['rgba(75, 192, 192, 0.7)', accentColor, 'rgba(255, 99, 132, 0.7)'], borderWidth: 0 }]
+            }
+        });
+
+        new Chart(document.getElementById('libraryOverviewChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Students', 'Books', 'Transactions'],
+                datasets: [{ label: 'Count', data: [db.students.length, db.books.length, db.transactions.length], backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 206, 86, 0.7)'] }]
+            }, options: { plugins: { legend: { display: false } } }
+        });
+
+        const bookCounts = {};
+        db.transactions.forEach(t => { if(t.type === 'Borrow') { bookCounts[t.bookAcc] = (bookCounts[t.bookAcc] || 0) + 1; } });
+        const sortedBooks = Object.entries(bookCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        new Chart(document.getElementById('topBooksChart'), {
+            type: 'bar',
+            data: { labels: sortedBooks.map(i => i[0]), datasets: [{ label: 'Borrows', data: sortedBooks.map(i => i[1]), backgroundColor: accentColor, indexAxis: 'y' }] }, options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+        });
+
+        const recentTx = db.transactions.slice().reverse().slice(0, 7);
+        new Chart(document.getElementById('borrowTrendsChart'), {
+            type: 'line',
+            data: { labels: recentTx.map((_, i) => `Tx ${i+1}`), datasets: [{ label: 'Activity', data: recentTx.map(() => Math.floor(Math.random() * 10) + 1), borderColor: accentColor, fill: true, backgroundColor: 'rgba(255, 122, 26, 0.2)' }] }
+        });
+    </script>
+</body>
+</html>

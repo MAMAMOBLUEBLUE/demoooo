@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Library</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Shared Database Logic -->
+    <script>
+        // Initialize DB if empty
+        const INIT_DB = {
+            students: [
+                {id: '23-0717', name: 'Aldrin Samson', course: 'BSCS', dept: 'CCSICT', contact: 'aldrin@test.com'},
+                {id: '23-2001', name: 'Mary Angel', course: 'BSIT', dept: 'CCSICT', contact: 'mary@test.com'}
+            ],
+            books: [
+                {acc: 'ACC-001', title: 'Clean Code', author: 'Robert Martin', status: 'Available'},
+                {acc: 'ACC-002', title: 'Intro to Algorithms', author: 'Thomas Cormen', status: 'Borrowed'},
+                {acc: 'ACC-003', title: 'Design Patterns', author: 'Gang of Four', status: 'Lost'}
+            ],
+            transactions: [],
+            payments: []
+        };
+        if (!localStorage.getItem('libraryDB')) {
+            localStorage.setItem('libraryDB', JSON.stringify(INIT_DB));
+        }
+    </script>
+</head>
+<body class="centered-layout">
+    <div class="card auth-card">
+        <h2 style="margin-bottom: 10px;">Library Portal</h2>
+        <p style="color: var(--muted); margin-bottom: 30px;">Digital Access Management</p>
+        
+        <form onsubmit="handleLogin(event)">
+            <div style="text-align: left; margin-bottom: 5px; color: var(--muted); font-size: 0.9rem;">User ID / Username</div>
+            <input type="text" id="username" placeholder="e.g., admin or 23-0717" required>
+            
+            <div style="text-align: left; margin-bottom: 5px; color: var(--muted); font-size: 0.9rem;">Password</div>
+            <input type="password" id="password" placeholder="Password" required>
+            
+            <button type="submit" class="btn" style="width: 100%;">Login</button>
+        </form>
+        <p style="margin-top: 20px; font-size: 0.8rem; color: #555;">
+            Admin: admin / admin123 <br>
+            Student: 23-0717 / (any pass)
+        </p>
+    </div>
+
+    <script>
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            
+            // Reload DB in case it was just initialized
+            const db = JSON.parse(localStorage.getItem('libraryDB'));
+
+            // 1. Check Admin
+            if (u === 'admin' && p === 'admin123') {
+                sessionStorage.setItem('role', 'admin');
+                window.location.href = 'verify_otp.html'; // Go to OTP simulation
+                return;
+            }
+
+            // 2. Check Student
+            // Find student by ID in the mock DB
+            const student = db.students.find(s => s.id === u);
+            if (student) {
+                // In a real app, check password here. 
+                // For this demo, we assume password is correct if student ID exists.
+                sessionStorage.setItem('role', 'student');
+                sessionStorage.setItem('studentId', student.id);
+                
+                // Skip OTP for students in this demo for easier testing
+                sessionStorage.setItem('isLoggedIn', 'true');
+                window.location.href = 'student_dashboard.html';
+                return;
+            }
+
+            alert('Invalid Credentials');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Books</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">Library Admin</div>
+        <nav>
+            <a href="index.html">Dashboard</a>
+            <a href="students.html">Students</a>
+            <a href="books.html" class="active">Books</a>
+            <a href="transaction.html">Transactions</a>
+            <a href="payment.html">Payments</a>
+            <a href="report.html">Reports</a>
+            <a href="backup.html">Backup & Restore</a>
+            <a href="#" onclick="logout()" class="logout">Logout</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <h1>Book Inventory</h1>
+
+        <div class="card">
+            <h3>Add Book</h3>
+            <form onsubmit="addBook(event)" style="display: flex; gap: 10px;">
+                <input id="acc" placeholder="Accession #" required>
+                <input id="title" placeholder="Book Title" required>
+                <input id="author" placeholder="Author">
+                <button class="btn" style="width: 200px;">Add</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <input onkeyup="render()" id="search" placeholder="Search books...">
+            <table>
+                <thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="tbody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="metrics">
+        <h3>Summary</h3>
+        <div class="metric-card-small"><div class="val" id="metric-students">0</div><div class="lbl">Students</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-books">0</div><div class="lbl">Books</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-borrowed" style="color:#f97316;">0</div><div class="lbl">Borrowed</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-lost" style="color:#ef4444;">0</div><div class="lbl">Lost</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-overdue" style="color:#fbbf24;">0</div><div class="lbl">Overdue</div></div>
+    </aside>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('libraryDB'));
+        function logout() { sessionStorage.clear(); window.location.href='login.html'; }
+
+        function updateMetrics() {
+            document.getElementById('metric-students').innerText = db.students.length;
+            document.getElementById('metric-books').innerText = db.books.length;
+            const bCount = db.books.filter(b => b.status === 'Borrowed').length;
+            document.getElementById('metric-borrowed').innerText = bCount;
+            document.getElementById('metric-lost').innerText = db.books.filter(b => b.status === 'Lost').length;
+            document.getElementById('metric-overdue').innerText = Math.floor(bCount * 0.1); 
+        }
+
+        function render() {
+            const tbody = document.getElementById('tbody');
+            const term = document.getElementById('search').value.toLowerCase();
+            tbody.innerHTML = '';
+            db.books.forEach(b => {
+                if(b.title.toLowerCase().includes(term) || b.acc.toLowerCase().includes(term)) {
+                    const statusClass = `status-${b.status.toLowerCase()}`;
+                    tbody.innerHTML += `<tr><td>${b.acc}</td><td>${b.title}</td><td>${b.author}</td><td><span class="status-tag ${statusClass}">${b.status}</span></td><td><button onclick="del('${b.acc}')" class="btn-sm btn-danger" style="border:none; border-radius:4px;">Delete</button></td></tr>`;
+                }
+            });
+        }
+
+        function addBook(e) {
+            e.preventDefault();
+            const acc = document.getElementById('acc').value;
+            if(db.books.find(b => b.acc === acc)) return alert('Accession exists');
+            db.books.push({ acc: acc, title: document.getElementById('title').value, author: document.getElementById('author').value, status: 'Available' });
+            localStorage.setItem('libraryDB', JSON.stringify(db));
+            render();
+            updateMetrics();
+            e.target.reset();
+        }
+
+        function del(acc) {
+            if(confirm('Delete book?')) {
+                db.books = db.books.filter(b => b.acc !== acc);
+                localStorage.setItem('libraryDB', JSON.stringify(db));
+                render();
+                updateMetrics();
+            }
+        }
+
+        render();
+        updateMetrics();
+    </script>
+</body>
+</html>

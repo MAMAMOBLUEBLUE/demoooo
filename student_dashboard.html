@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Student Specific Styles */
+        body { display: block; } /* Override flex from style.css */
+        
+        .navbar {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+
+        /* ID Card Styles */
+        .id-card {
+            width: 400px; height: 240px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            display: flex; padding: 20px;
+            position: relative; margin: 0 auto 20px;
+            color: white; overflow: hidden;
+        }
+        .id-card::before {
+            content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 8px;
+            background: var(--accent);
+        }
+        .id-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding-left: 15px; }
+        .id-right { width: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        .uni-name { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; line-height: 1.2; }
+        .pass-label { color: var(--accent); font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; margin-bottom: 10px; }
+        .st-name { font-size: 1.2rem; font-weight: bold; margin: 0; }
+        .st-no { font-family: monospace; color: var(--accent); font-size: 1.1rem; display: block; margin-top: 5px; }
+        .st-dept { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+        
+        .qr-box { background: white; padding: 5px; border-radius: 8px; margin-bottom: 5px; }
+        .qr-box img { width: 90px; height: 90px; display: block; }
+
+        /* Penalty Box */
+        .penalty-box {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <span class="brand" style="margin:0; font-size:1.2rem;">Student Portal</span>
+        <button onclick="logout()" class="btn btn-sm btn-danger" style="width: auto;">Log Out</button>
+    </nav>
+
+    <div class="container">
+        
+        <!-- ID Card Section -->
+        <div style="text-align: center; margin-bottom: 40px;">
+            <div id="printableID" class="id-card">
+                <div class="id-left">
+                    <div>
+                        <div style="display:flex; align-items:center; margin-bottom:10px;">
+                            <!-- Placeholder Logo -->
+                            <div style="width:40px; height:40px; background:white; border-radius:50%; margin-right:10px; display:flex; align-items:center; justify-content:center; color:black; font-weight:bold;">U</div>
+                            <div class="uni-name" style="text-align:left;">University<br>Library</div>
+                        </div>
+                        <div class="pass-label">Access Pass</div>
+                    </div>
+                    <div>
+                        <h2 class="st-name" id="cardName">Student Name</h2>
+                        <span class="st-no" id="cardNo">00-0000</span>
+                        <div class="st-dept" id="cardDept">Course | Dept</div>
+                    </div>
+                </div>
+                <div class="id-right">
+                    <div class="qr-box">
+                        <!-- Generating a real QR code using a public API for the demo -->
+                        <img id="cardQr" src="" alt="QR">
+                    </div>
+                    <span style="font-size:0.6rem; color:var(--muted);">Scan for Entry</span>
+                </div>
+            </div>
+            
+            <button onclick="downloadID()" class="btn" style="width:auto; display:inline-flex; align-items:center; gap:8px;">
+                Download ID Card
+            </button>
+        </div>
+
+        <!-- Penalty Header -->
+        <div class="penalty-box">
+            <h3 style="margin:0; color:var(--muted);">Unpaid Penalties</h3>
+            <h2 id="totalPenalty" style="margin:0; color:#10b981;">₱0.00</h2>
+        </div>
+
+        <!-- History -->
+        <h3 style="color:var(--accent);">Transaction History</h3>
+        <div class="card" style="padding:0; overflow:hidden;">
+            <table style="margin:0;">
+                <thead>
+                    <tr>
+                        <th>Book Title</th>
+                        <th>Action</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="txBody"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        const db = JSON.parse(localStorage.getItem('libraryDB')) || {};
+        
+        function checkAuth() {
+            const role = sessionStorage.getItem('role');
+            const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) window.location.href = 'login.html';
+            
+            // If admin tries to access this page, redirect to admin dashboard
+            if (role === 'admin') window.location.href = 'index.html';
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        function loadStudentData() {
+            const studentId = sessionStorage.getItem('studentId');
+            if (!studentId) return logout();
+
+            const student = db.students.find(s => s.id === studentId);
+            if (!student) return logout();
+
+            // 1. Populate ID Card
+            document.getElementById('cardName').innerText = student.name;
+            document.getElementById('cardNo').innerText = student.id;
+            document.getElementById('cardDept').innerText = `${student.course} | ${student.dept}`;
+            document.getElementById('cardQr').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${student.id}`;
+
+            // 2. Filter Transactions
+            const txs = db.transactions.filter(t => t.studentId === studentId).reverse();
+            const tbody = document.getElementById('txBody');
+            tbody.innerHTML = '';
+
+            if (txs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No history found.</td></tr>';
+            } else {
+                txs.forEach(t => {
+                    const book = db.books.find(b => b.acc === t.bookAcc);
+                    const bookTitle = book ? book.title : t.bookAcc;
+                    
+                    let statusColor = '#fff';
+                    if(t.type === 'Borrow') statusColor = '#f97316'; // Orange
+                    if(t.type === 'Return') statusColor = '#10b981'; // Green
+                    if(t.type === 'Lost') statusColor = '#ef4444';   // Red
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${bookTitle}</td>
+                            <td style="color:${statusColor}; font-weight:bold;">${t.type}</td>
+                            <td>${t.date}</td>
+                            <td>${t.type === 'Borrow' ? 'Due in 3 days' : '-'}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // 3. Mock Penalty Calculation (Just checking if they have active 'Lost' items or random overdue)
+            // In a real static demo, we'll just check if they have unreturned books and simulate a fee
+            const activeBorrows = txs.filter(t => t.type === 'Borrow');
+            // Check if corresponding return exists
+            let penalty = 0;
+            
+            // Simple logic: If you borrowed something and haven't returned it yet, show a fake penalty for demo
+            // Real logic requires date diff, but for static demo:
+            // We look for 'Borrow' events that don't have a matching 'Return' later in the array
+            // Since we reversed the array (newest first), we just check somewhat loosely.
+            
+            // Allow manual "Payment" via admin console to clear this in a real app, 
+            // but here we just display 0 unless manually set in DB.
+            
+            document.getElementById('totalPenalty').innerText = '₱0.00'; 
+            document.getElementById('totalPenalty').style.color = '#10b981';
+        }
+
+        function downloadID() {
+            const idCard = document.getElementById('printableID');
+            html2canvas(idCard, { backgroundColor: null }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'Student_ID.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        // Initialize
+        checkAuth();
+        loadStudentData();
+    </script>
+</body>
+</html>

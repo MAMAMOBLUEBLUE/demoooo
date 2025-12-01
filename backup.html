@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Backup & Restore</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">Library Admin</div>
+        <nav>
+            <a href="index.html">Dashboard</a>
+            <a href="students.html">Students</a>
+            <a href="books.html">Books</a>
+            <a href="transaction.html">Transactions</a>
+            <a href="payment.html">Payments</a>
+            <a href="report.html">Reports</a>
+            <a href="backup.html" class="active">Backup & Restore</a>
+            <a href="#" onclick="logout()" class="logout">Logout</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <h1>System Backup</h1>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="card" style="background: linear-gradient(145deg, #111827 0%, #0f172a 100%);">
+                <h2>📦 Backup Data</h2>
+                <p style="color: var(--muted);">Download a JSON file containing all students, books, and transactions.</p>
+                <button onclick="downloadBackup()" class="btn">Download JSON</button>
+            </div>
+
+            <div class="card" style="border-color: #ef4444;">
+                <h2 style="color: #ef4444;">⚠️ Restore Data</h2>
+                <p style="color: var(--muted);">Upload a JSON file to replace the current database.</p>
+                <input type="file" id="fileInput" accept=".json">
+                <button onclick="restoreBackup()" class="btn btn-danger">Restore</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="metrics">
+        <h3>Summary</h3>
+        <div class="metric-card-small"><div class="val" id="metric-students">0</div><div class="lbl">Students</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-books">0</div><div class="lbl">Books</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-borrowed" style="color:#f97316;">0</div><div class="lbl">Borrowed</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-lost" style="color:#ef4444;">0</div><div class="lbl">Lost</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-overdue" style="color:#fbbf24;">0</div><div class="lbl">Overdue</div></div>
+    </aside>
+
+    <script>
+        // Check Authentication first
+        if (!sessionStorage.getItem('isLoggedIn')) {
+            window.location.href = 'login.html';
+        }
+
+        let db = JSON.parse(localStorage.getItem('libraryDB'));
+        function logout() { sessionStorage.clear(); window.location.href='login.html'; }
+
+        function updateMetrics() {
+            document.getElementById('metric-students').innerText = db.students.length;
+            document.getElementById('metric-books').innerText = db.books.length;
+            const bCount = db.books.filter(b => b.status === 'Borrowed').length;
+            document.getElementById('metric-borrowed').innerText = bCount;
+            document.getElementById('metric-lost').innerText = db.books.filter(b => b.status === 'Lost').length;
+            document.getElementById('metric-overdue').innerText = Math.floor(bCount * 0.1); 
+        }
+
+        function downloadBackup() {
+            const dataStr = localStorage.getItem('libraryDB');
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "library_backup.json";
+            a.click();
+        }
+
+        function restoreBackup() {
+            const file = document.getElementById('fileInput').files[0];
+            if(!file) return alert('Please select a file');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if(json.students && json.books) {
+                        localStorage.setItem('libraryDB', JSON.stringify(json));
+                        alert('Restore Successful! Reloading...');
+                        window.location.reload();
+                    } else { alert('Invalid Backup File'); }
+                } catch(err) { alert('Error parsing JSON'); }
+            };
+            reader.readAsText(file);
+        }
+
+        updateMetrics();
+    </script>
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Transactions - Library</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* --- Page Specific Styles --- */
+        .scanner-container { 
+            background: #000; border-radius: 16px; overflow: hidden; 
+            width: 100%; max-width: 300px; height: 300px; margin: 0 auto 24px auto; 
+            position: relative; box-shadow: var(--shadow); display: flex; justify-content: center; align-items: center;
+        }
+        #reader-mock { width: 100%; height: 100%; background: #111; object-fit: cover; }
+        
+        .tx-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; justify-content: center; align-items: center; }
+        .tx-box { width: 200px; height: 200px; position: relative; border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6); }
+        .tx-laser { position: absolute; width: 100%; height: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: txScan 2s infinite linear; }
+        @keyframes txScan { 0% { top: 5px; opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { top: 195px; opacity: 0; } }
+        
+        #scanStatus { position: absolute; bottom: 40px; width: 100%; text-align: center; color: var(--accent); font-family: monospace; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); z-index: 20; pointer-events: none; }
+
+        .tx-console { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
+        @media (max-width: 1000px) { .tx-console { grid-template-columns: 1fr; } }
+        
+        .action-panel, .receipt-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); height: 100%; display: flex; flex-direction: column; }
+        .receipt-panel { background: #1f2937; color: #fff; gap: 15px; }
+        .receipt-header { border-bottom: 1px dashed #4b5563; padding-bottom: 15px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .live-status { font-size: 0.75rem; background: #22c55e; color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold; text-transform: uppercase; }
+
+        .info-card-pop { background: rgba(255, 255, 255, 0.1); border-left: 4px solid var(--accent); padding: 15px; border-radius: 8px; display: none; position: relative; animation: slideInRight 0.3s ease-out forwards; }
+        .info-card-pop.active { display: block; }
+        .remove-btn { position: absolute; top: 5px; right: 10px; background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 1.2rem; }
+        
+        .demo-input-group { margin-top:10px; padding:10px; border:1px dashed #4b5563; border-radius:8px; background:rgba(0,0,0,0.2); }
+        .demo-input-group input { margin-bottom:5px; padding:8px; font-size:0.9rem; }
+        .demo-label { font-size:0.8rem; color:#9ca3af; display:block; margin-bottom:5px; }
+    </style>
+</head>
+<body>
+    <!-- LEFT SIDEBAR (FIXED) -->
+    <aside class="sidebar">
+        <div class="brand">Library Admin</div>
+        <nav>
+            <a href="index.html">Dashboard</a>
+            <a href="students.html">Students</a>
+            <a href="books.html">Books</a>
+            <a href="transaction.html" class="active">Transactions</a>
+            <a href="payment.html">Payments</a>
+            <a href="report.html">Reports</a>
+            <a href="backup.html">Backup & Restore</a>
+            <a href="#" onclick="logout()" class="logout">Logout</a>
+        </nav>
+    </aside>
+
+    <!-- CENTER CONTENT (SCROLLABLE) -->
+    <main class="content">
+        <h1>Transaction Terminal</h1>
+
+        <div class="scanner-container">
+            <div id="reader-mock"></div>
+            <div class="tx-overlay"><div class="tx-box"><div class="tx-laser"></div></div></div>
+            <div id="scanStatus">Demo Mode: Camera Off</div>
+        </div>
+
+        <div class="tx-console">
+            <!-- LEFT: CONTROLS -->
+            <div class="action-panel">
+                <h3 style="color: var(--text); margin-top:0;">1. Select Action</h3>
+                <select id="action_type" onchange="updateInterface()">
+                    <option value="Borrow">📚 Borrow Book</option>
+                    <option value="Return">↩️ Return Book</option>
+                    <option value="Lost">⚠️ Report Lost</option>
+                </select>
+
+                <div class="demo-input-group">
+                    <span class="demo-label">⚡ DEMO: Simulate Scan</span>
+                    <div style="display:flex; gap:5px;">
+                        <input id="manualStudent" placeholder="Student ID (e.g. 23-0717)">
+                        <button class="btn btn-sm" onclick="simulateScanStudent()" style="width:auto;">Scan</button>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <input id="manualBook" placeholder="Book Acc (e.g. ACC-001)">
+                        <button class="btn btn-sm" onclick="simulateScanBook()" style="width:auto;">Scan</button>
+                    </div>
+                </div>
+
+                <div id="instructionBox" style="margin-top: auto; padding: 15px; background: var(--bg); border-radius: 12px; border: 1px dashed var(--border); color: var(--muted); font-size: 0.9rem;">
+                    <p style="margin:0;"><strong>Instructions:</strong></p>
+                    <ul style="padding-left: 20px; margin: 5px 0;">
+                        <li>Scan Student ID first.</li>
+                        <li>Scan Book Accession Code next.</li>
+                        <li>Verify details on the receipt.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- RIGHT: RECEIPT -->
+            <div class="receipt-panel">
+                <div class="receipt-header">
+                    <h3 style="margin:0;">Transaction Receipt</h3>
+                    <span class="live-status">Ready</span>
+                </div>
+
+                <div id="studentCard" class="info-card-pop">
+                    <button type="button" class="remove-btn" onclick="clearStudent()">×</button>
+                    <h4 style="margin:0; color:var(--accent); font-size:0.85rem;">STUDENT</h4>
+                    <p><strong id="sname" style="font-size: 1.1rem;"></strong></p>
+                    <p style="font-family: monospace; color: #9ca3af;" id="sno"></p>
+                </div>
+                <div id="studentPlaceholder" style="text-align:center; color: #6b7280; padding: 15px; border: 1px dashed #4b5563; border-radius: 8px;">
+                    Scan Student ID...
+                </div>
+
+                <!-- DYNAMIC ACCOUNT SUMMARY -->
+                <div id="accountSummary" class="info-card-pop" style="margin-top: 15px; border-left-color: #10b981; background: rgba(16, 185, 129, 0.1);">
+                    <h4 style="margin:0; margin-bottom:5px; color:#10b981; font-size:0.85rem;">ACCOUNT SUMMARY</h4>
+                    <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+                        <span>Active Borrows:</span>
+                        <strong id="accBorrows">0</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px;">
+                        <span>Status:</span>
+                        <strong id="accStatus" style="color:#10b981">Good</strong>
+                    </div>
+                </div>
+
+                <div id="bookCard" class="info-card-pop" style="margin-top: 10px;">
+                    <button type="button" class="remove-btn" onclick="clearBook()">×</button>
+                    <h4 style="margin:0; color:var(--accent); font-size:0.85rem;">ITEM SELECTED</h4>
+                    <div id="bookDetailsContent"></div>
+                </div>
+                <div id="bookPlaceholder" style="margin-top:10px; text-align:center; color: #6b7280; padding: 15px; border: 1px dashed #4b5563; border-radius: 8px;">
+                    Waiting for Book...
+                </div>
+
+                <div style="margin-top: auto; padding-top: 20px;">
+                    <button id="submitBtn" onclick="confirmTransaction()" class="btn" style="width: 100%; background: #4f46e5; font-size: 1.1rem; padding: 14px;">Confirm Transaction</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Transaction Log</h3>
+            <table>
+                <thead><tr><th>Student</th><th>Book</th><th>Action</th><th>Date</th></tr></thead>
+                <tbody id="txnBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR (FIXED METRICS) -->
+    <aside class="metrics">
+        <h3>Summary</h3>
+        
+        <div class="metric-card-small">
+            <div class="val" id="metric-students">0</div>
+            <div class="lbl">Students</div>
+        </div>
+        <div class="metric-card-small">
+            <div class="val" id="metric-books">0</div>
+            <div class="lbl">Books</div>
+        </div>
+        <div class="metric-card-small">
+            <div class="val" id="metric-borrowed" style="color:#f97316;">0</div>
+            <div class="lbl">Borrowed</div>
+        </div>
+        <div class="metric-card-small">
+            <div class="val" id="metric-lost" style="color:#ef4444;">0</div>
+            <div class="lbl">Lost</div>
+        </div>
+        <div class="metric-card-small">
+            <div class="val" id="metric-overdue" style="color:#fbbf24;">0</div>
+            <div class="lbl">Overdue</div>
+        </div>
+    </aside>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('libraryDB'));
+        function logout() { sessionStorage.clear(); window.location.href='login.html'; }
+
+        // State
+        let currentStudent = null;
+        let currentBook = null;
+
+        function updateGlobalMetrics() {
+            document.getElementById('metric-students').innerText = db.students.length;
+            document.getElementById('metric-books').innerText = db.books.length;
+            const borrowedCount = db.books.filter(b => b.status === 'Borrowed').length;
+            document.getElementById('metric-borrowed').innerText = borrowedCount;
+            document.getElementById('metric-lost').innerText = db.books.filter(b => b.status === 'Lost').length;
+            document.getElementById('metric-overdue').innerText = Math.floor(borrowedCount * 0.1); 
+        }
+
+        function renderTxns() {
+            const tbody = document.getElementById('txnBody');
+            tbody.innerHTML = '';
+            db.transactions.slice().reverse().slice(0, 10).forEach(t => {
+                const sName = db.students.find(s => s.id === t.studentId)?.name || t.studentId;
+                const bTitle = db.books.find(b => b.acc === t.bookAcc)?.title || t.bookAcc;
+                let color = t.type === 'Borrow' ? '#f97316' : (t.type === 'Lost' ? '#ef4444' : '#10b981');
+                tbody.innerHTML += `<tr><td>${sName}</td><td>${bTitle}</td><td style="color:${color}; font-weight:bold;">${t.type}</td><td>${t.date}</td></tr>`;
+            });
+        }
+
+        function updateAccountSummary(studentId) {
+            const txs = db.transactions.filter(t => t.studentId === studentId);
+            let borrowedBooks = new Set();
+            txs.sort((a,b) => a.id - b.id).forEach(t => {
+                if(t.type === 'Borrow') borrowedBooks.add(t.bookAcc);
+                if(t.type === 'Return' || t.type === 'Lost') borrowedBooks.delete(t.bookAcc); 
+            });
+            const count = borrowedBooks.size;
+            document.getElementById('accBorrows').innerText = count;
+            const statusEl = document.getElementById('accStatus');
+            if (count > 2) { statusEl.innerText = "Limit Reached"; statusEl.style.color = "#ef4444"; }
+            else if (count > 0) { statusEl.innerText = "Active"; statusEl.style.color = "#f97316"; }
+            else { statusEl.innerText = "Good"; statusEl.style.color = "#10b981"; }
+            document.getElementById('accountSummary').classList.add('active');
+        }
+
+        // --- SIMULATION LOGIC ---
+        function simulateScanStudent() {
+            const id = document.getElementById('manualStudent').value;
+            const student = db.students.find(s => s.id === id);
+            if(student) {
+                currentStudent = student;
+                document.getElementById('sname').innerText = student.name;
+                document.getElementById('sno').innerText = student.id;
+                document.getElementById('studentPlaceholder').style.display = 'none';
+                document.getElementById('studentCard').classList.add('active');
+                updateAccountSummary(student.id);
+                document.getElementById('manualStudent').value = '';
+            } else { alert('Student Not Found'); }
+        }
+
+        function clearStudent() {
+            currentStudent = null;
+            document.getElementById('studentPlaceholder').style.display = 'block';
+            document.getElementById('studentCard').classList.remove('active');
+            document.getElementById('accountSummary').classList.remove('active');
+        }
+
+        function simulateScanBook() {
+            const acc = document.getElementById('manualBook').value;
+            const book = db.books.find(b => b.acc === acc);
+            if(book) {
+                currentBook = book;
+                const content = document.getElementById('bookDetailsContent');
+                content.innerHTML = `<p><strong style="font-size: 1.1rem;">${book.title}</strong></p><p style="font-family: monospace;">${book.acc}</p><p class="status-tag status-${book.status.toLowerCase()}">${book.status}</p>`;
+                document.getElementById('bookPlaceholder').style.display = 'none';
+                document.getElementById('bookCard').classList.add('active');
+                document.getElementById('manualBook').value = '';
+            } else { alert('Book Not Found'); }
+        }
+
+        function clearBook() {
+            currentBook = null;
+            document.getElementById('bookPlaceholder').style.display = 'block';
+            document.getElementById('bookCard').classList.remove('active');
+        }
+
+        function updateInterface() { clearBook(); }
+
+        function confirmTransaction() {
+            if(!currentStudent) return alert('Please scan a Student first.');
+            if(!currentBook) return alert('Please scan a Book.');
+            const action = document.getElementById('action_type').value;
+            
+            if (action === 'Borrow') {
+                if(currentBook.status !== 'Available') return alert('Book is not Available!');
+                currentBook.status = 'Borrowed';
+            } else if (action === 'Return') {
+                if(currentBook.status === 'Available') return alert('Book is already Available!');
+                currentBook.status = 'Available';
+            } else if (action === 'Lost') {
+                currentBook.status = 'Lost';
+            }
+
+            db.transactions.push({ id: Date.now(), studentId: currentStudent.id, bookAcc: currentBook.acc, type: action, date: new Date().toLocaleString() });
+            localStorage.setItem('libraryDB', JSON.stringify(db));
+            
+            alert('Transaction Successful!');
+            clearBook();
+            renderTxns();
+            updateGlobalMetrics(); // Refresh right sidebar
+            updateAccountSummary(currentStudent.id);
+        }
+
+        // Init
+        renderTxns();
+        updateGlobalMetrics();
+    </script>
+</body>
+</html>

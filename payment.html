@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">Library Admin</div>
+        <nav>
+            <a href="index.html">Dashboard</a>
+            <a href="students.html">Students</a>
+            <a href="books.html">Books</a>
+            <a href="transaction.html">Transactions</a>
+            <a href="payment.html" class="active">Payments</a>
+            <a href="report.html">Reports</a>
+            <a href="backup.html">Backup & Restore</a>
+            <a href="#" onclick="logout()" class="logout">Logout</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <h1>Penalty Payments</h1>
+
+        <div class="card">
+            <h3>Calculate Penalty</h3>
+            <div style="display:flex; gap:10px;">
+                <input id="stuId" placeholder="Enter Student ID" style="margin:0;">
+                <button onclick="checkPenalty()" class="btn" style="width:auto;">Check</button>
+            </div>
+            
+            <div id="billArea" style="display:none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <h2>Total Due: <span id="amount" style="color:#ef4444;">₱0.00</span></h2>
+                <button onclick="pay()" class="btn btn-success">Mark as Paid</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Payment History</h3>
+            <table>
+                <thead><tr><th>Student ID</th><th>Amount</th><th>Date</th></tr></thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="metrics">
+        <h3>Summary</h3>
+        <div class="metric-card-small"><div class="val" id="metric-students">0</div><div class="lbl">Students</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-books">0</div><div class="lbl">Books</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-borrowed" style="color:#f97316;">0</div><div class="lbl">Borrowed</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-lost" style="color:#ef4444;">0</div><div class="lbl">Lost</div></div>
+        <div class="metric-card-small"><div class="val" id="metric-overdue" style="color:#fbbf24;">0</div><div class="lbl">Overdue</div></div>
+    </aside>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('libraryDB'));
+        function logout() { sessionStorage.clear(); window.location.href='login.html'; }
+
+        function updateMetrics() {
+            document.getElementById('metric-students').innerText = db.students.length;
+            document.getElementById('metric-books').innerText = db.books.length;
+            const bCount = db.books.filter(b => b.status === 'Borrowed').length;
+            document.getElementById('metric-borrowed').innerText = bCount;
+            document.getElementById('metric-lost').innerText = db.books.filter(b => b.status === 'Lost').length;
+            document.getElementById('metric-overdue').innerText = Math.floor(bCount * 0.1); 
+        }
+
+        let currentPenalty = 0;
+
+        function checkPenalty() {
+            const id = document.getElementById('stuId').value;
+            const student = db.students.find(s => s.id === id);
+            if(!student) return alert('Student not found');
+            const randomPenalty = Math.floor(Math.random() * 2) * 50; 
+            currentPenalty = randomPenalty;
+            document.getElementById('amount').innerText = '₱' + currentPenalty.toFixed(2);
+            document.getElementById('billArea').style.display = 'block';
+        }
+
+        function pay() {
+            if(currentPenalty <= 0) return alert('No penalty to pay');
+            db.payments.push({ studentId: document.getElementById('stuId').value, amount: currentPenalty, date: new Date().toLocaleString() });
+            localStorage.setItem('libraryDB', JSON.stringify(db));
+            alert('Payment Recorded!');
+            document.getElementById('billArea').style.display = 'none';
+            document.getElementById('stuId').value = '';
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const tbody = document.getElementById('historyBody');
+            tbody.innerHTML = '';
+            db.payments.slice().reverse().forEach(p => {
+                tbody.innerHTML += `<tr><td>${p.studentId}</td><td style="color:#10b981; font-weight:bold;">₱${p.amount}</td><td>${p.date}</td></tr>`;
+            });
+        }
+
+        renderHistory();
+        updateMetrics();
+    </script>
+</body>
+</html>

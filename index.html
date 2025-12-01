@@ -77,15 +77,7 @@
         </div>
     </main>
 
-    <!-- RIGHT SIDEBAR -->
-    <aside class="metrics">
-        <h3>Summary</h3>
-        <div class="metric-card-small"><div class="val" id="metric-students">0</div><div class="lbl">Students</div></div>
-        <div class="metric-card-small"><div class="val" id="metric-books">0</div><div class="lbl">Books</div></div>
-        <div class="metric-card-small"><div class="val" id="metric-borrowed" style="color:#f97316;">0</div><div class="lbl">Borrowed</div></div>
-        <div class="metric-card-small"><div class="val" id="metric-lost" style="color:#ef4444;">0</div><div class="lbl">Lost</div></div>
-        <div class="metric-card-small"><div class="val" id="metric-overdue" style="color:#fbbf24;">0</div><div class="lbl">Overdue</div></div>
-    </aside>
+    <!-- RIGHT SIDEBAR REMOVED -->
 
     <script>
         const db = JSON.parse(localStorage.getItem('libraryDB')) || {};
@@ -97,22 +89,15 @@
             const borrowed = db.books?.filter(b => b.status === 'Borrowed').length || 0;
             const lost = db.books?.filter(b => b.status === 'Lost').length || 0;
             
-            // Top Cards
+            // Top Cards Updates
             document.getElementById('stat-students').innerText = db.students?.length || 0;
             document.getElementById('stat-books').innerText = totalBooks;
             document.getElementById('stat-borrowed').innerText = borrowed;
             document.getElementById('stat-lost').innerText = lost;
-
-            // Sidebar Metrics
-            document.getElementById('metric-students').innerText = db.students?.length || 0;
-            document.getElementById('metric-books').innerText = totalBooks;
-            document.getElementById('metric-borrowed').innerText = borrowed;
-            document.getElementById('metric-lost').innerText = lost;
-            document.getElementById('metric-overdue').innerText = Math.floor(borrowed * 0.1); 
         }
         updateMetrics();
 
-        // Charts
+        // Charts Logic
         const accentColor = '#ff7a1a';
         const textColor = '#e5e7eb';
         const gridColor = '#1f2937';
